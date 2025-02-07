@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flappy Bird</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    canvas { 
+      display: block;
+      background-image: url('../assets_resume/img/Quidditch_Background.png'); /* Updated background image */
+      background-size: cover; /* Ensure it covers the whole canvas */
+      background-position: center; /* Center the background */
+    }
+
+    .score-counter {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 15px 30px; /* Increased padding for a larger counter */
+      font-size: 32px; /* Increased font size */
+      color: white;
+      background-color: #009688;  /* Matches the game's color scheme */
+      border: none;
+      border-radius: 5px;
+      z-index: 1000;
+    }
+
+    .game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: bold; /* Make the text bold */
+      color: red;
+      text-shadow: 3px 3px 5px white; /* Add white outline effect */
+      display: none;
+      z-index: 1000;
+      text-align: center;
+    }
+
+    .score-display {
+      font-size: 24px;
+      color: white;
+      margin-top: 20px;
+      text-shadow: 2px 2px 4px black;
+    }
+
+    #tryAgainButton {
+      position: absolute;
+      top: 70%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      color: white;
+      background-color: #FF5733; /* Red color for Try Again button */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 1000;
+      display: none; /* Initially hidden */
+    }
+
+    /* Style for the "Back to website" link */
+    #backToWebsiteLink {
+      display: inline-block;
+      margin-top: 20px;
+      font-size: 20px;
+      color: #CC5500; /* Burnt orange color for the link */
+      text-decoration: none;
+      background-color: #f4f4f4;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: 1px solid #CC5500;
+      cursor: pointer;
+    }
+
+    #backToWebsiteLink:hover {
+      background-color: #CC5500;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  
+  <canvas id="gameCanvas"></canvas>
+  <div class="score-counter" id="scoreCounter">Score: 0</div>
+  <div class="game-over" id="gameOver">
+    Game Over
+    <div class="score-display" id="finalScore">Score: 0</div>
+    <!-- New clickable link to redirect to the website -->
+    <a id="backToWebsiteLink" href="../html/MyWebsite.html" target="_blank">Back to website</a>
+  </div>
+  <button id="tryAgainButton">Try Again</button>
+  <script>
+    let canvas = document.getElementById("gameCanvas");
+    let context = canvas.getContext("2d");
+    let gameOverText = document.getElementById("gameOver");
+    let finalScoreDisplay = document.getElementById("finalScore");
+    let tryAgainButton = document.getElementById("tryAgainButton");
+    let scoreCounter = document.getElementById("scoreCounter");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let bird, pipes, pipeWidth, pipeGap, frameCount, gameRunning, gamePaused, animationFrameRequest, score;
+    
+    // Load the image for the bird
+    let birdImage = new Image();
+    birdImage.src = "../assets_resume/img/Harry Potter.png"; // Make sure the path is correct
+
+    birdImage.onload = function() {
+      initGame(); // Initialize the game when the image is loaded
+    };
+
+    function initGame() {
+      bird = {
+        x: 150,
+        y: 150,
+        width: 50, // Original width of the bird
+        height: 50, // Original height of the bird
+        gravity: 0.6, // Increased gravity to make the bird fall faster
+        lift: -10,    // Increased lift for a stronger flap response
+        velocity: 0   // Reset velocity to 0 at the start of the game
+      };
+
+      pipes = [];
+      pipeWidth = 40;
+      pipeGap = 200;
+      frameCount = 0;
+      gameRunning = true;
+      gamePaused = false;
+      score = 0;
+      scoreCounter.innerText = "Score: " + score;
+      gameOverText.style.display = 'none';
+      tryAgainButton.style.display = 'none'; // Hide the "Try Again" button
+
+      // Generate the initial pipes closer to the left of the screen
+      for (let i = 0; i < 5; i++) {
+        let topHeight = Math.random() * (canvas.height - pipeGap - 50);
+        let bottomHeight = canvas.height - topHeight - pipeGap;
+        pipes.push({ x: 500 + i * 200, top: topHeight, bottom: bottomHeight });
+      }
+    }
+
+    document.addEventListener("keydown", () => {
+      if (gameRunning && !gamePaused) {
+        bird.velocity = bird.lift; // Make the bird "flap" when key is pressed
+      }
+    });
+
+    tryAgainButton.addEventListener("click", () => {
+      location.reload(); // Refresh the page to restart the game
+    });
+
+    function drawBird() {
+      // Draw the bird using the original size (no doubling of width/height)
+      context.drawImage(birdImage, bird.x, bird.y, bird.width, bird.height); 
+    }
+
+    function drawPipes() {
+      context.fillStyle = "#CC5500"; // Burnt orange color for pipes
+      pipes.forEach(pipe => {
+        context.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+        context.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+      });
+    }
+
+    function updatePipes() {
+      if (!gamePaused) {
+        if (frameCount % 90 === 0) {
+          let topHeight = Math.random() * (canvas.height - pipeGap - 50);
+          let bottomHeight = canvas.height - topHeight - pipeGap;
+          pipes.push({ x: canvas.width, top: topHeight, bottom: bottomHeight });
+        }
+        pipes.forEach(pipe => {
+          pipe.x -= 2;
+          if (pipe.x + pipeWidth === bird.x) {
+            score++;
+            scoreCounter.innerText = "Score: " + score;
+          }
+        });
+        pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+      }
+    }
+
+    function checkCollision() {
+      for (let i = 0; i < pipes.length; i++) {
+        let pipe = pipes[i];
+        // Use the bird's actual width/height for the collision detection
+        if (bird.x < pipe.x + pipeWidth &&
+            bird.x + bird.width > pipe.x &&
+            (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function updateBird() {
+      if (!gamePaused) {
+        bird.velocity += bird.gravity; // Apply gravity to velocity
+        bird.y += bird.velocity; // Update bird's position with velocity
+        
+        // Prevent bird from falling below the canvas
+        if (bird.y + bird.height > canvas.height) {
+          bird.y = canvas.height - bird.height;
+          bird.velocity = 0; // Stop falling if the bird hits the ground
+        }
+        
+        // Prevent bird from going above the canvas
+        if (bird.y < 0) {
+          bird.y = 0;
+          bird.velocity = 0; // Stop upwards movement if it hits the top
+        }
+      }
+    }
+
+    function gameLoop() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (gameRunning) {
+        updateBird();
+        updatePipes();
+        drawBird();
+        drawPipes();
+
+        if (checkCollision()) {
+          gameRunning = false;
+          gameOverText.style.display = 'block';
+          finalScoreDisplay.innerText = "Score: " + score;
+          tryAgainButton.style.display = 'inline-block'; // Show the "Try Again" button
+        }
+      } else {
+        drawBird();
+        drawPipes();
+      }
+
+      frameCount++;
+      animationFrameRequest = requestAnimationFrame(gameLoop);
+    }
+
+    // Initialize the game for the first time
+    initGame();
+    animationFrameRequest = requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
